@@ -1,0 +1,101 @@
+import pandas as pd
+import csv
+import json
+import pickle
+
+# Step 1: Load and Filter Dataset
+class DataProcessor:
+    def __init__(self, file_path):
+        self.df = pd.read_csv(file_path)
+
+    def filter_columns(self):
+        # Remove unnecessary columns
+        self.df = self.df.drop(['SoldCount', 'MarketingType', 'New_Release_Flag', 'PriceReg', 'LowUserPrice'], axis=1)
+        self.df.to_csv('filtered_data.csv', index=False)
+        return self.df
+
+# Step 2: Define Product Class
+class Product:
+    def __init__(self, order, file_type, sku_number, sold_flag, release_number, strength_factor, release_year, item_count, low_net_price):
+        self.Order = order
+        self.File_Type = file_type
+        self.SKU_Number = sku_number
+        self.SoldFlag = sold_flag
+        self.ReleaseNumber = release_number
+        self.StrengthFactor = strength_factor
+        self.ReleaseYear = release_year
+        self.ItemCount = item_count
+        self.LowNetPrice = low_net_price
+    
+    @classmethod
+    def from_csv_line(cls, line_of_csv):
+        data = [x.strip() for x in line_of_csv.split(',')]
+        return cls(*data)
+
+    def __str__(self):
+        return f"{self.Order}, {self.File_Type}, {self.SKU_Number}, {self.SoldFlag}, {self.ReleaseNumber}, {self.StrengthFactor}, {self.ReleaseYear}, {self.ItemCount}, {self.LowNetPrice}"
+
+# Step 3: Data Manager Class
+class DataManager:
+    def __init__(self, csv_file):
+        self.csv_file = csv_file
+        self.data = []
+        with open(self.csv_file, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                self.data.append(row)
+
+    def display_data(self):
+        for row in self.data[:10]:  # Display first 10 rows for preview
+            print(row)
+
+    def sort_data(self, column_name):
+        self.data.sort(key=lambda x: float(x[column_name]))
+        print("Sorted Data (Top 10):")
+        for row in self.data[:10]:
+            print(row)
+
+    def filter_data(self, column_name, value='1.0'):
+        filtered = [row for row in self.data if row[column_name] == value]
+        print("Filtered Data (Top 10):")
+        print(filtered[:10])
+        return filtered
+    
+    def save_json(self, json_file):
+        with open(json_file, 'w') as file:
+            json.dump(self.data, file, indent=4)
+        print(f"Filtered and sorted data saved to '{json_file}' in JSON format.")
+
+    def save_pickle(self, pickle_file):
+        with open(pickle_file, 'wb') as file:
+            pickle.dump(self.data, file)
+        print(f"Data saved to '{pickle_file}' in pickle format.")
+
+# Step 4: List Comprehensions for Filtering SKU Numbers
+class ListComprehension:
+    @staticmethod
+    def filter_sku_by_strengthfactor(file_path, threshold=135000):
+        with open(file_path, newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            return [row["SKU_number"] for row in reader if float(row["StrengthFactor"]) > threshold]
+
+# Execution
+if __name__ == "__main__":
+    # Load and filter dataset
+    processor = DataProcessor("SalesKaggle3.csv")
+    filtered_df = processor.filter_columns()
+    print("Filtered Dataset Saved.")
+    
+    # Initialize Data Manager
+    data_manager = DataManager("filtered_data.csv")
+    data_manager.display_data()
+    data_manager.sort_data("StrengthFactor")
+    filtered_data = data_manager.filter_data("SoldFlag")
+    
+    # Save filtered data
+    data_manager.save_json("filtered_sorted_data.json")
+    data_manager.save_pickle("filtered_sorted_data.pkl")
+    
+    # List comprehension filtering
+    filtered_skus = ListComprehension.filter_sku_by_strengthfactor("filtered_data.csv")
+    print("Filtered SKU Numbers:", filtered_skus[:10])
